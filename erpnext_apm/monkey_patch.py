@@ -40,11 +40,15 @@ def _wrap_frappe_application():
 		
 		from erpnext_apm.apm import init_apm, get_client
 		
-		# Initialize APM client - this must succeed
-		client = init_apm()
+		# Initialize APM client - force initialization to ensure it works
+		client = init_apm(force=True)
 		if not client:
-			logger.warning("APM client initialization returned None - check configuration")
-			return
+			logger.warning("APM client initialization returned None - check configuration and logs")
+			# Try once more without force
+			client = init_apm(force=False)
+			if not client:
+				logger.error("APM client still None after retry - cannot wrap WSGI")
+				return
 		
 		logger.info(f"APM client initialized in monkey_patch: {client}")
 		

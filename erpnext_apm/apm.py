@@ -58,12 +58,18 @@ def get_config():
 	return config
 
 
-def init_apm():
+def init_apm(force=False):
 	"""Initialize Elastic APM client"""
 	global _apm_client, _initialized
 	
-	if _initialized:
-		return _apm_client
+	if _initialized and not force:
+		# If already initialized but client is None, something went wrong
+		# Allow re-initialization if client is None
+		if _apm_client is None and not force:
+			logger.warning("APM was marked as initialized but client is None. Attempting re-initialization...")
+			_initialized = False
+		else:
+			return _apm_client
 	
 	if not is_apm_enabled():
 		logger.info("Elastic APM is disabled (ELASTIC_APM_ENABLED=false)")

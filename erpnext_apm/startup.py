@@ -35,12 +35,16 @@ def setup_apm():
 		from erpnext_apm.apm import init_apm, get_client
 		from erpnext_apm.wsgi import wrap_application
 		
-		# Initialize APM client - this must succeed
-		client = init_apm()
+		# Initialize APM client - force re-initialization if needed
+		client = init_apm(force=True)
 		if not client:
 			logger.error("APM client initialization failed - check environment variables and logs")
-			_apm_setup_done = True
-			return
+			# Try one more time without force
+			client = init_apm(force=False)
+			if not client:
+				logger.error("APM client still None after retry")
+				_apm_setup_done = True
+				return
 		
 		logger.info(f"APM client initialized in startup: {client}")
 		
