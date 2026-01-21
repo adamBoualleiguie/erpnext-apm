@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 # Track if we've already set up APM
 _apm_setup_done = False
+_apm_initialization_attempted = False
 
 
 def setup_apm():
@@ -78,6 +79,32 @@ def setup_apm():
 		logger.error(f"Failed to setup APM: {e}", exc_info=True)
 		# Don't crash the application if APM setup fails
 		_apm_setup_done = True  # Mark as done to avoid retry loops
+
+
+def ensure_apm_initialized():
+	"""
+	Ensure APM is initialized - called via before_request hook
+	
+	This is a fallback to ensure APM is set up even if module-level
+	initialization didn't work. It only runs once per process.
+	"""
+	global _apm_initialization_attempted
+	
+	# Only try once per process
+	if _apm_initialization_attempted:
+		return
+	
+	_apm_initialization_attempted = True
+	
+	# Check if already done
+	if _apm_setup_done:
+		return
+	
+	# Try to setup
+	try:
+		setup_apm()
+	except Exception as e:
+		logger.debug(f"ensure_apm_initialized failed: {e}")
 
 
 # Try to setup APM at module import time

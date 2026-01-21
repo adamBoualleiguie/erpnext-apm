@@ -96,6 +96,10 @@ except ImportError:
 # Also use after_migrate and startup as fallback
 after_migrate = ["erpnext_apm.startup.setup_apm"]
 
+# Use before_request hook to ensure APM is initialized on first request
+# This is a fallback in case module-level initialization didn't work
+before_request = ["erpnext_apm.startup.ensure_apm_initialized"]
+
 # Uninstallation
 # ------------
 
