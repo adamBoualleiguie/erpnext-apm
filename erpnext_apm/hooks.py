@@ -85,7 +85,15 @@ app_license = "mit"
 # before_install = "erpnext_apm.install.before_install"
 # after_install = "erpnext_apm.install.after_install"
 
-# APM Setup - Initialize after migrations
+# APM Setup - Initialize early via module import
+# Import monkey_patch to trigger APM wrapping at module load time
+# This ensures the WSGI application is wrapped early, similar to Sentry
+try:
+	import erpnext_apm.monkey_patch  # noqa: F401
+except ImportError:
+	pass
+
+# Also use after_migrate and startup as fallback
 after_migrate = ["erpnext_apm.startup.setup_apm"]
 
 # Uninstallation

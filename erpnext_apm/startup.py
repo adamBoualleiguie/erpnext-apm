@@ -5,7 +5,7 @@
 Startup module for APM initialization
 
 This module wraps the Frappe WSGI application with Elastic APM middleware.
-It's called via the after_migrate hook to ensure APM is initialized early.
+It's called both at module import time (via hooks.py) and via the after_migrate hook.
 """
 
 import logging
@@ -20,7 +20,10 @@ def setup_apm():
 	"""
 	Setup APM instrumentation
 	
-	This function is called via the after_migrate hook.
+	This function is called:
+	1. At module import time (via hooks.py import)
+	2. Via the after_migrate hook (as fallback)
+	
 	It initializes APM and wraps the WSGI application.
 	"""
 	global _apm_setup_done
@@ -59,3 +62,12 @@ def setup_apm():
 		logger.error(f"Failed to setup APM: {e}", exc_info=True)
 		# Don't crash the application if APM setup fails
 		_apm_setup_done = True  # Mark as done to avoid retry loops
+
+
+# Try to setup APM at module import time
+# This ensures it runs early, even if after_migrate hasn't run
+try:
+	setup_apm()
+except Exception:
+	# Silently fail at import time - setup_apm will be called again via hook
+	pass
