@@ -93,6 +93,12 @@ try:
 except ImportError:
 	pass
 
+# Also try app_patcher as another approach
+try:
+	import erpnext_apm.app_patcher  # noqa: F401
+except ImportError:
+	pass
+
 # Also use after_migrate and startup as fallback
 after_migrate = ["erpnext_apm.startup.setup_apm"]
 

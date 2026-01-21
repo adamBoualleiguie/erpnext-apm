@@ -96,15 +96,19 @@ def ensure_apm_initialized():
 	
 	_apm_initialization_attempted = True
 	
-	# Check if already done
-	if _apm_setup_done:
-		return
-	
-	# Try to setup
+	# Try to patch the application
 	try:
-		setup_apm()
+		from erpnext_apm.app_patcher import patch_application
+		patch_application()
 	except Exception as e:
 		logger.debug(f"ensure_apm_initialized failed: {e}")
+	
+	# Also try setup_apm if not done
+	if not _apm_setup_done:
+		try:
+			setup_apm()
+		except Exception as e:
+			logger.debug(f"setup_apm in ensure_apm_initialized failed: {e}")
 
 
 # Try to setup APM at module import time
