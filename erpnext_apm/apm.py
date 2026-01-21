@@ -81,6 +81,7 @@ def init_apm():
 	
 	try:
 		config = get_config()
+		logger.debug(f"APM config loaded: SERVICE_NAME={config.get('SERVICE_NAME')}, SERVER_URL={config.get('SERVER_URL')}")
 		
 		# Build config dict for elasticapm.Client
 		client_config = {
@@ -102,9 +103,16 @@ def init_apm():
 		if "SERVICE_NODE_NAME" in config:
 			client_config["SERVICE_NODE_NAME"] = config["SERVICE_NODE_NAME"]
 		
+		logger.debug(f"Creating Elastic APM client with config keys: {list(client_config.keys())}")
+		
 		# Create client
 		# Note: Client automatically starts capturing when created
 		_apm_client = elasticapm.Client(client_config)
+		
+		if not _apm_client:
+			logger.error("elasticapm.Client() returned None - this should not happen")
+			_initialized = True
+			return None
 		
 		logger.info(
 			f"Elastic APM initialized: service={config['SERVICE_NAME']}, "
@@ -112,12 +120,16 @@ def init_apm():
 		)
 		
 		# Verify client is ready
-		if _apm_client:
-			logger.info(f"APM client created successfully, capturing enabled: {_apm_client.config.capture_body}")
+		logger.info(f"APM client created successfully, service_name={_apm_client.config.service_name}")
 		
 		_initialized = True
 		return _apm_client
 		
+	except ValueError as e:
+		# Configuration error - missing required vars
+		logger.error(f"APM configuration error: {e}. Check environment variables.")
+		_initialized = True
+		return None
 	except Exception as e:
 		logger.error(f"Failed to initialize Elastic APM: {e}", exc_info=True)
 		# Don't crash the application if APM fails

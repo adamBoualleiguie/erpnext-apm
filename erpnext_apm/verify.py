@@ -94,9 +94,27 @@ def verify_apm_setup():
 	print("\n5. Package Installation:")
 	try:
 		import elasticapm
-		print(f"   ✓ elastic-apm installed: {elasticapm.__version__}")
+		version = getattr(elasticapm, '__version__', 'unknown')
+		print(f"   ✓ elastic-apm installed: {version}")
 	except ImportError:
 		print("   ✗ elastic-apm not installed")
+	
+	# 6. Try to manually initialize
+	print("\n6. Manual Initialization Test:")
+	try:
+		from erpnext_apm.apm import init_apm, get_client
+		client = init_apm()
+		if client:
+			print(f"   ✓ Manual init successful: {client}")
+			print(f"   Service: {client.config.service_name}")
+			print(f"   Server: {client.config.server_url}")
+		else:
+			print("   ✗ Manual init returned None")
+			print("   Check environment variables and error logs")
+	except Exception as e:
+		print(f"   ✗ Manual init failed: {e}")
+		import traceback
+		traceback.print_exc()
 	
 	print("\n" + "=" * 60)
 	print("Verification Complete")

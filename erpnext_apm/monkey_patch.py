@@ -9,6 +9,7 @@ similar to how Sentry wraps the application in frappe.app.
 """
 
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -31,15 +32,21 @@ def _wrap_frappe_application():
 	_wrapping_attempted = True
 	
 	try:
-		from erpnext_apm.apm import init_apm, is_apm_enabled
-		
-		# Check if APM is enabled
-		if not is_apm_enabled():
+		# Check if APM is enabled first
+		enabled = os.getenv("ELASTIC_APM_ENABLED", "true").lower()
+		if enabled not in ("true", "1", "yes", "on"):
 			logger.debug("APM is disabled, skipping WSGI wrapping")
 			return
 		
-		# Initialize APM client early
-		init_apm()
+		from erpnext_apm.apm import init_apm, get_client
+		
+		# Initialize APM client - this must succeed
+		client = init_apm()
+		if not client:
+			logger.warning("APM client initialization returned None - check configuration")
+			return
+		
+		logger.info(f"APM client initialized in monkey_patch: {client}")
 		
 		# Try to import and wrap frappe.app.application
 		# This might fail if frappe.app hasn't been imported yet,
@@ -50,14 +57,22 @@ def _wrap_frappe_application():
 			if hasattr(frappe_app, "application"):
 				from erpnext_apm.wsgi import wrap_application
 				# Wrap the application
-				frappe_app.application = wrap_application(frappe_app.application)
-				logger.info("Frappe WSGI application wrapped with Elastic APM (monkey_patch)")
+				original_app = frappe_app.application
+				wrapped_app = wrap_application(original_app)
+				
+				if wrapped_app != original_app:
+					frappe_app.application = wrapped_app
+					logger.info("Frappe WSGI application wrapped with Elastic APM (monkey_patch)")
+				else:
+					logger.warning("WSGI wrapping returned original application - wrapping may have failed")
 			else:
 				logger.debug("frappe.app.application not found yet, will wrap via startup hook")
 				
-		except (ImportError, AttributeError):
+		except (ImportError, AttributeError) as e:
 			# frappe.app might not be imported yet, that's okay
-			logger.debug("frappe.app not available yet, will wrap via startup hook")
+			logger.debug(f"frappe.app not available yet ({e}), will wrap via startup hook")
+		except Exception as e:
+			logger.error(f"Error wrapping frappe.app.application: {e}", exc_info=True)
 			
 	except Exception as e:
 		logger.error(f"Failed to wrap Frappe application with APM: {e}", exc_info=True)

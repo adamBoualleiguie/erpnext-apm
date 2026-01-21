@@ -32,11 +32,17 @@ def setup_apm():
 		return
 	
 	try:
-		from erpnext_apm.apm import init_apm
+		from erpnext_apm.apm import init_apm, get_client
 		from erpnext_apm.wsgi import wrap_application
 		
-		# Initialize APM client
-		init_apm()
+		# Initialize APM client - this must succeed
+		client = init_apm()
+		if not client:
+			logger.error("APM client initialization failed - check environment variables and logs")
+			_apm_setup_done = True
+			return
+		
+		logger.info(f"APM client initialized in startup: {client}")
 		
 		# Wrap the WSGI application
 		# This must be done after frappe.app.application is defined
@@ -46,8 +52,14 @@ def setup_apm():
 			
 			# Wrap the application if it exists
 			if hasattr(frappe_app, "application"):
-				frappe_app.application = wrap_application(frappe_app.application)
-				logger.info("APM instrumentation setup complete - WSGI application wrapped")
+				original_app = frappe_app.application
+				wrapped_app = wrap_application(original_app)
+				
+				if wrapped_app != original_app:
+					frappe_app.application = wrapped_app
+					logger.info("APM instrumentation setup complete - WSGI application wrapped")
+				else:
+					logger.warning("WSGI wrapping returned original application - check client initialization")
 			else:
 				logger.warning("frappe.app.application not found, APM WSGI wrapping skipped")
 		
