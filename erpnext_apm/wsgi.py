@@ -31,9 +31,13 @@ def wrap_application(application):
 		from elasticapm.contrib.wsgi import ElasticAPM
 		
 		# Wrap the application with Elastic APM middleware
+		# The ElasticAPM middleware automatically captures all HTTP requests
 		wrapped_app = ElasticAPM(application, client=client)
 		
-		logger.info("Frappe WSGI application wrapped with Elastic APM middleware")
+		logger.info(
+			f"Frappe WSGI application wrapped with Elastic APM middleware. "
+			f"Client: {client}, Service: {client.config.service_name if client else 'None'}"
+		)
 		return wrapped_app
 		
 	except ImportError:

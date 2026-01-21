@@ -103,12 +103,17 @@ def init_apm():
 			client_config["SERVICE_NODE_NAME"] = config["SERVICE_NODE_NAME"]
 		
 		# Create client
+		# Note: Client automatically starts capturing when created
 		_apm_client = elasticapm.Client(client_config)
 		
 		logger.info(
 			f"Elastic APM initialized: service={config['SERVICE_NAME']}, "
-			f"server={config['SERVER_URL']}"
+			f"server={config['SERVER_URL']}, client={_apm_client}"
 		)
+		
+		# Verify client is ready
+		if _apm_client:
+			logger.info(f"APM client created successfully, capturing enabled: {_apm_client.config.capture_body}")
 		
 		_initialized = True
 		return _apm_client
